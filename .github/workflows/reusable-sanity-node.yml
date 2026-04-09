@@ -1,0 +1,40 @@
+name: reusable-sanity-node
+
+on:
+  workflow_call:
+    inputs:
+      subprojects:
+        required: true
+        type: string
+
+jobs:
+  node:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        subproject: ${{ fromJson(inputs.subprojects) }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/reusable-steps/setup-os
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: |
+          cd ${{ matrix.subproject }}
+          npm install
+
+      - name: Run JS Project
+        shell: bash
+        timeout-minutes: 1
+        run: |
+          cd ${{ matrix.subproject }}
+          npm start &
