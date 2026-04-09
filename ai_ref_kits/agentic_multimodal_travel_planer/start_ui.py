@@ -309,8 +309,8 @@ class TravelRouterClient:
 # Example prompts for the UI
 EXAMPLES = [
     "Which city is shown in this image?",
-    "Give me flights from Milan to Berlin for March 1st to March 10th",
-    "Give me hotels in Milan for March 1st to March 10th for 2 guests",
+    "Give me flights from Milan to Berlin for October 1st to October 10th",
+    "Give me hotels in Milan for October 1st to October 10th for 2 guests",
     (
         "Help me finding flights to the city "
         "in the image"
@@ -569,12 +569,12 @@ async def run_agent_workflow(query: str):
     seen_tool_calls = set()
 
     # Mark current log position for all logs to only capture new events
-    logs_dir = Path(__file__).parent / "logs"
+    logs_dir = Path(__file__).resolve().parent / "logs"
 
     # Reset cache for travel_router log (handoffs)
     travel_router_log = logs_dir / "travel_router.log"
     if travel_router_log.exists():
-        cache_key = str(travel_router_log)
+        cache_key = str(travel_router_log.resolve())
         try:
             current_size = travel_router_log.stat().st_size
             log_cache[cache_key] = {
@@ -588,7 +588,7 @@ async def run_agent_workflow(query: str):
     for log_file in logs_dir.glob("*.log"):
         if log_file.name == "travel_router.log":
             continue
-        cache_key = str(log_file)
+        cache_key = str(log_file.resolve())
         try:
             current_size = log_file.stat().st_size
             log_cache[cache_key] = {

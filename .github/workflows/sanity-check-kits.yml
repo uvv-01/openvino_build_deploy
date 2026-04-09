@@ -24,11 +24,10 @@ jobs:
       webcam: ${{ steps.categorize-subprojects.outputs.webcam }}
       python: ${{ steps.categorize-subprojects.outputs.python }}
       notebook: ${{ steps.categorize-subprojects.outputs.notebook }}
-      agentic: ${{ steps.categorize-subprojects.outputs.agentic }}
+      mcp: ${{ steps.categorize-subprojects.outputs.mcp }}
 
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -45,15 +44,76 @@ jobs:
         with:
           subprojects: ${{ steps.find-updates.outputs.subproject_dirs }}
 
-  python:
+  gradio:
     needs: find-subprojects
-    if: ${{ needs.find-subprojects.outputs.python != '[]' }}
+    if: ${{ needs.find-subprojects.outputs.gradio != '[]' }}
 
-    uses: ./.github/workflows/reusable-sanity-python.yml
+    runs-on: ${{ matrix.os }}
 
-    with:
-      subprojects: ${{ needs.find-subprojects.outputs.python }}
-      python_versions: '["3.10", "3.13"]'
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        python: ["3.10", "3.13"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.gradio) }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
+
+      - uses: ./.github/reusable-steps/setup-hugging-face
+        with:
+          hf_token: ${{ secrets.HF_TOKEN }}
+
+      - name: Determine script
+        shell: bash
+        run: |
+          if [[ -f "${{ matrix.subproject }}/ci/test.py" ]]; then
+            echo "script=ci/test.py" >> "$GITHUB_ENV"
+          else
+            echo "script=main.py" >> "$GITHUB_ENV"
+          fi
+
+      - uses: ./.github/reusable-steps/gradio-action
+        timeout-minutes: 60
+        with:
+          script: ${{ env.script }}
+          project: ${{ matrix.subproject }}
+
+  mcp:
+    needs: find-subprojects
+    if: ${{ needs.find-subprojects.outputs.mcp != '[]' }}
+
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, ubuntu-24.04-arm, windows-2025]
+        python: ["3.11", "3.13"]
+        subproject: ${{ fromJson(needs.find-subprojects.outputs.mcp) }}
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/reusable-steps/setup-os
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+
+      - uses: ./.github/reusable-steps/setup-python
+        with:
+          python: ${{ matrix.python }}
+          project: ${{ matrix.subproject }}
 
   webcam:
     needs: find-subprojects
